@@ -2,9 +2,10 @@ pipeline {
     agent any
     
     environment {
-        AWS_ACCOUNT = '471112924304'  // CHANGE THIS!
-        AWS_REGION = 'eu-west-1'
-        ECR_REPO = 'php-guestbook'
+        AWS_ACCOUNT = '471112924304'  // Will be replaced
+        AWS_REGION = 'us-east-1'
+        PHP_REPO = 'php-guestbook'
+        MYSQL_REPO = 'php-guestbook-mysql'
         IMAGE_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT[0..7]}"
     }
     
@@ -12,7 +13,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main', 
-                    url: 'https://github.com/rizvaughan/php-guestbook.git'
+                    url: 'https://github.com/YOUR_USERNAME/php-guestbook.git'
             }
         }
         
@@ -26,24 +27,52 @@ pipeline {
             }
         }
         
-        stage('Build Docker Image') {
+        // ===== NEW: Build MySQL Image =====
+        stage('Build MySQL Image') {
             steps {
                 sh '''
-                    docker build -t ${ECR_REPO}:${IMAGE_TAG} .
-                    docker tag ${ECR_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
-                    docker tag ${ECR_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:latest
+                    echo "Building MySQL image..."
+                    docker build -t ${MYSQL_REPO}:${IMAGE_TAG} mysql/
+                    docker tag ${MYSQL_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${MYSQL_REPO}:${IMAGE_TAG}
+                    docker tag ${MYSQL_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${MYSQL_REPO}:latest
+                    echo "✅ MySQL image built!"
                 '''
             }
         }
         
+        // ===== Build PHP Image =====
+        stage('Build PHP Image') {
+            steps {
+                sh '''
+                    echo "Building PHP image..."
+                    docker build -t ${PHP_REPO}:${IMAGE_TAG} .
+                    docker tag ${PHP_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PHP_REPO}:${IMAGE_TAG}
+                    docker tag ${PHP_REPO}:${IMAGE_TAG} ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PHP_REPO}:latest
+                    echo "✅ PHP image built!"
+                '''
+            }
+        }
+        
+        // ===== Push BOTH images =====
         stage('Push to ECR') {
             steps {
-                withAWS(credentials: 'aws', region: 'eu-west-1') {
+                withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
                     sh '''
+                        # Login to ECR
                         aws ecr get-login-password --region ${AWS_REGION} | \
                             docker login --username AWS --password-stdin ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                        docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}
-                        docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:latest
+                        
+                        # Push MySQL
+                        echo "Pushing MySQL image..."
+                        docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${MYSQL_REPO}:${IMAGE_TAG}
+                        docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${MYSQL_REPO}:latest
+                        
+                        # Push PHP
+                        echo "Pushing PHP image..."
+                        docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PHP_REPO}:${IMAGE_TAG}
+                        docker push ${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PHP_REPO}:latest
+                        
+                        echo "✅ All images pushed to ECR!"
                     '''
                 }
             }
@@ -52,7 +81,7 @@ pipeline {
     
     post {
         success {
-            echo "✅ Build successful! Image pushed to ECR."
+            echo "✅ Build successful! All images pushed to ECR."
         }
         failure {
             echo "❌ Build failed! Check logs."
