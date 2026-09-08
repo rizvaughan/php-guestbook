@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         AWS_ACCOUNT = '471112924304'  // Will be replaced
-        AWS_REGION = 'us-east-1'
+        AWS_REGION = 'eu-west-1'
         PHP_REPO = 'php-guestbook'
         MYSQL_REPO = 'php-guestbook-mysql'
         IMAGE_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT[0..7]}"
