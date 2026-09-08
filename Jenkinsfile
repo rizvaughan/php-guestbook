@@ -56,7 +56,7 @@ pipeline {
         // ===== Push BOTH images =====
         stage('Push to ECR') {
             steps {
-                withAWS(credentials: 'aws-credentials', region: 'us-east-1') {
+                withAWS(credentials: 'aws', region: 'eu-west-1') {
                     sh '''
                         # Login to ECR
                         aws ecr get-login-password --region ${AWS_REGION} | \
