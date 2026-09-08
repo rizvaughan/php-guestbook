@@ -13,7 +13,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main', 
-                    url: 'https://github.com/YOUR_USERNAME/php-guestbook.git'
+                    url: 'https://github.com/rizvaughan/php-guestbook.git'
             }
         }
         
