@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        AWS_ACCOUNT = '471112924304'  // Will be replaced
+        AWS_ACCOUNT = 'xxxxxxxx'  // Will be replaced
         AWS_REGION = 'eu-west-1'
         PHP_REPO = 'php-guestbook'
         MYSQL_REPO = 'php-guestbook-mysql'
